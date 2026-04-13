@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep CoT · TF.js + Backprop</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- TensorFlow.js for accelerated math -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+</head>
+<body>
+    <div class="bg-animation" id="bgAnimation"></div>
+    <div class="overlay" id="overlay">
+        <div class="loader"><div class="loader-ring"></div><div class="loader-ring"></div></div>
+        <div class="loader-text">Training NLP network with TensorFlow.js…</div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>🧠 Deep CoT · Customizable Layers</h1>
+            <p class="subtitle">Chain‑of‑Thought reasoning with TF.js neural network (adjust layers, units, LR)</p>
+            <span class="badge">⚡ TensorFlow.js · Real‑time training · Modular</span>
+        </header>
+
+        <div class="main-grid">
+            <!-- Left Panel: Input & Training Controls -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-icon">📝</div>
+                    <div class="panel-title">Input & Model Config</div>
+                </div>
+
+                <textarea id="inputText" placeholder="Enter a math word problem …&#10;Example: A train travels 120 km in 2 hours. How far in 5 hours?"></textarea>
+
+                <div class="btn-group">
+                    <button class="btn-primary" id="startReasoningBtn">🚀 Start Reasoning</button>
+                    <button class="btn-secondary" id="resetBtn">🔄 Reset</button>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label"><span>Reasoning Depth</span><span class="control-value" id="depthValue">5 steps</span></div>
+                    <input type="range" id="depthSlider" min="3" max="10" value="5">
+                </div>
+
+                <!-- Model Hyperparameters -->
+                <div class="section-title">🧪 Model Hyperparameters</div>
+                <div class="control-group">
+                    <div class="control-label"><span>Hidden Layers</span><span class="control-value" id="numLayersValue">2</span></div>
+                    <input type="range" id="numLayersSlider" min="1" max="5" value="2" step="1">
+                </div>
+                <div class="control-group">
+                    <div class="control-label"><span>Units per Layer</span><span class="control-value" id="unitsValue">24</span></div>
+                    <input type="range" id="unitsSlider" min="8" max="64" value="24" step="8">
+                </div>
+                <div class="control-group">
+                    <div class="control-label"><span>Learning Rate</span><span class="control-value" id="lrValue">0.01</span></div>
+                    <input type="range" id="lrSlider" min="0.001" max="0.1" value="0.01" step="0.001">
+                </div>
+                <div class="control-group">
+                    <div class="control-label"><span>Activation</span></div>
+                    <select id="activationSelect" style="width:100%; padding:8px; border-radius:8px; background:#0a0e27; color:white; border:1px solid var(--border);">
+                        <option value="relu" selected>ReLU</option>
+                        <option value="tanh">Tanh</option>
+                        <option value="sigmoid">Sigmoid</option>
+                    </select>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn-secondary" id="trainBtn">📚 Train with TF.js</button>
+                    <button class="btn-secondary" id="testNLPBtn">🔬 Test NLP</button>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="stat-value" id="statParams">-</div><div class="stat-label">Parameters</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statLayers">-</div><div class="stat-label">Layers</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statHeads">-</div><div class="stat-label">Heads</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statTime">0ms</div><div class="stat-label">Latency</div></div>
+                </div>
+
+                <div class="train-panel">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>🎯 Training Loss</span>
+                        <span class="loss-display" id="lossDisplay">0.000</span>
+                    </div>
+                    <div style="margin-top: 8px;"><span>📊 Epochs: </span><span id="epochDisplay">0</span></div>
+                    <div style="margin-top: 8px;"><span>📈 Accuracy: </span><span id="accuracyDisplay">0.00</span></div>
+                </div>
+            </div>
+
+            <!-- Center Panel: Visualization -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-icon">🕸️</div>
+                    <div class="panel-title">Network Architecture (TF.js)</div>
+                </div>
+                <div class="viz-container">
+                    <canvas id="networkCanvas"></canvas>
+                    <div class="layer-info">
+                        <div>Input: 50‑dim BoW</div>
+                        <div>Output: 4 classes</div>
+                    </div>
+                </div>
+                <div class="attention-container">
+                    <div class="attention-title"><span>🔥</span> Weight Heatmap (First Dense Layer)</div>
+                    <div class="attention-grid" id="attentionGrid"></div>
+                </div>
+                <div class="output-container">
+                    <div class="output-header">
+                        <span>📤</span> Final Output
+                        <div class="thinking-indicator" id="thinkingIndicator" style="display:none;">
+                            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                        </div>
+                    </div>
+                    <div class="output-content" id="finalOutput">
+                        Enter a problem and click "Start Reasoning" — NLP classification guides CoT.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Reasoning Chain -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-icon">🔗</div>
+                    <div class="panel-title">Reasoning Chain</div>
+                </div>
+                <div class="reasoning-chain" id="reasoningChain">
+                    <div class="empty-state"><div class="empty-icon">🤔</div><div>No active session</div></div>
+                </div>
+                <div class="token-container" id="tokenContainer" style="display:none;">
+                    <div class="token-label">🎯 Tokens & NLP features</div>
+                    <div class="token-list" id="tokenList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load app modules -->
+    <script src="data.json"></script>   <!-- loads global TRAIN_DATA and DEFAULT_CONFIG -->
+    <script src="veo.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

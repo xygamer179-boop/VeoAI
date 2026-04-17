@@ -402,6 +402,9 @@ let lossHistory    = [];
 let accuracyHistory = [];
 let isTraining     = false;
 let lossCanvas, lossCtx;   // [BUG FIX] — lazy init inside init()
+let currentDeviceConfig = DEVICE_CONFIGS.balanced;
+let infiniteModeActive = false;
+let infiniteModeInterval = null;
 
 // ═══════════════════════════════════════════════════════════════════
 // Loading Bar
@@ -458,6 +461,48 @@ function buildModel() {
     document.getElementById('statLayers').innerText = numLayers + 1;
     document.getElementById('statHeads').innerText  = units;
     return nn;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Device Configuration Management
+// ═══════════════════════════════════════════════════════════════════
+function applyDeviceConfig(config) {
+    currentDeviceConfig = config;
+    document.getElementById('numLayersSlider').value = config.numLayers;
+    document.getElementById('unitsSlider').value = config.units;
+    document.getElementById('lrSlider').value = config.learningRate;
+    document.getElementById('activationSelect').value = config.activation;
+    document.getElementById('depthSlider').value = config.reasoningDepth;
+
+    // Update display values
+    document.getElementById('numLayersValue').innerText = config.numLayers;
+    document.getElementById('unitsValue').innerText = config.units;
+    document.getElementById('lrValue').innerText = config.learningRate.toFixed(4);
+    document.getElementById('depthValue').innerText = config.reasoningDepth + ' steps';
+
+    showNotification(`📱 Config: ${config.name} — ${config.description}`, 'success');
+}
+
+function startInfiniteMode() {
+    infiniteModeActive = true;
+    infiniteModeIndex = 0;
+    
+    showNotification('♾️ Infinite Mode activated - cycling through device configs every 3s', 'success');
+    
+    infiniteModeInterval = setInterval(() => {
+        const config = INFINITE_CONFIG_SEQUENCE[infiniteModeIndex % INFINITE_CONFIG_SEQUENCE.length];
+        applyDeviceConfig(config);
+        infiniteModeIndex++;
+    }, DEFAULT_CONFIG.infiniteInterval);
+}
+
+function stopInfiniteMode() {
+    if (infiniteModeInterval) {
+        clearInterval(infiniteModeInterval);
+        infiniteModeInterval = null;
+    }
+    infiniteModeActive = false;
+    showNotification('⏹️ Infinite Mode stopped', 'info');
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -598,9 +643,137 @@ function predictOperation(text) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// Tree of Thought Reasoning — Multi-path exploration
+// ═══════════════════════════════════════════════════════════════════
+async function startTreeOfThoughtReasoning() {
+    const input = document.getElementById('inputText').value.trim();
+    if (!input) { showNotification('Please enter a problem', 'warning'); return; }
+    if (!model)  { showNotification('Train the model first', 'error');   return; }
+
+    const depth    = parseInt(document.getElementById('depthSlider').value);
+    const chainDiv = document.getElementById('reasoningChain');
+    chainDiv.innerHTML = '';
+
+    document.getElementById('finalOutput').innerHTML        = '';
+    document.getElementById('thinkingIndicator').style.display = 'flex';
+    document.getElementById('tokenContainer').style.display    = 'none';
+    document.getElementById('confidenceMeter').style.display   = 'none';
+
+    const t0   = performance.now();
+    const pred = predictOperation(input);
+
+    visualizer?.activateLayer(0, 0.9);
+    visualizer?.fireSignal(0);
+
+    // Tree of Thought: Multiple reasoning paths
+    const paths = [
+        { name: 'Direct Extraction', icon: '🎯', description: 'Parse numbers directly and apply formula' },
+        { name: 'Contextual Analysis', icon: '🧠', description: 'Analyze context keywords to infer operations' },
+        { name: 'Dimensional Check', icon: '📏', description: 'Verify dimensional consistency of terms' },
+        { name: 'Symbolic Substitution', icon: '⚖️', description: 'Match problem structure to known patterns' },
+        { name: 'Constraint Propagation', icon: '🔗', description: 'Propagate constraints through variables' }
+    ];
+
+    // Only show depth number of paths
+    const activePaths = paths.slice(0, Math.min(depth, paths.length));
+
+    // Display initial thinking with multiple paths
+    addStepToUI({
+        step: 1,
+        type: 'Tree of Thought Init',
+        icon: '🌳',
+        content: `Exploring <strong>${activePaths.length}</strong> distinct reasoning branches for <em>${pred.className}</em>. Confidence: ${(pred.confidence * 100).toFixed(1)}%`,
+        confidence: pred.confidence
+    });
+
+    await new Promise(r => setTimeout(r, 300));
+
+    // Animate each path
+    for (let i = 0; i < activePaths.length; i++) {
+        const path = activePaths[i];
+        const conf = Math.min(0.6 + i * 0.06 + pred.confidence * 0.1, 0.99);
+
+        if (visualizer) {
+            const layer = Math.min(i, visualizer.nodes.reduce((m, n) => Math.max(m, n.layer), 0));
+            visualizer.activateLayer(layer, 0.5);
+            visualizer.fireSignal(layer);
+        }
+
+        // Create a container for the path
+        const chainDiv = document.getElementById('reasoningChain');
+        const pathCard = document.createElement('div');
+        pathCard.className = 'step-card fade-in path-card';
+        pathCard.innerHTML = `
+            <div class="step-header">
+                <div class="step-number">${i + 1}</div>
+                <div class="step-title"><span style="margin-right:8px">${path.icon}</span>${path.name}</div>
+            </div>
+            <div class="step-content">${path.description}</div>
+            <div class="step-meta"><span>Path Confidence: ${(conf * 100).toFixed(1)}%</span></div>
+            <div class="confidence-bar"><div class="confidence-fill" style="width:${(conf * 100)}%"></div></div>
+        `;
+        chainDiv.appendChild(pathCard);
+        chainDiv.scrollTop = chainDiv.scrollHeight;
+
+        visualizer?.nodes.forEach(n => {
+            if (n.layer === i % 3) n.target = 0.4 + 0.5 * Math.sin(i * 0.5 + n.idx);
+        });
+
+        await new Promise(r => setTimeout(r, 350));
+    }
+
+    // Final synthesis step
+    const synthesisConf = Math.min(pred.confidence + 0.15, 0.95);
+    addStepToUI({
+        step: activePaths.length + 1,
+        type: 'Path Synthesis',
+        icon: '✨',
+        content: `Merging insights from all <strong>${activePaths.length}</strong> paths. Selecting highest-confidence solution branch.`,
+        confidence: synthesisConf
+    });
+
+    await new Promise(r => setTimeout(r, 350));
+
+    // ── Real solver ──────────────────────────────────────────────
+    const { steps: solveSteps, answer } = solveProblem(input, pred.class);
+    const solutionHTML = solveSteps.length
+        ? `<div class="solution-box">
+            ${solveSteps.map(s => `
+                <div class="solution-step">
+                    <strong>${s.label}:</strong>
+                    <code>${s.formula}</code>
+                    <span class="sol-result">= ${s.result}</span>
+                </div>`).join('')}
+           </div>`
+        : `<p class="sol-fallback">Could not extract enough numerical data. Try a clearer formulation.</p>`;
+
+    document.getElementById('finalOutput').innerHTML = `
+        <div class="result-header">
+            <span class="result-badge">🌳 Tree of Thought</span>
+            <span class="result-badge">${pred.className}</span>
+            <span class="result-confidence">${(pred.confidence * 100).toFixed(1)}% confidence</span>
+        </div>
+        ${solutionHTML}
+        <div class="final-answer">Answer: <strong>${answer}</strong></div>
+    `;
+
+    showClassProbs(pred.probs);
+    document.getElementById('thinkingIndicator').style.display = 'none';
+    showTokens(input.split(/\s+/).slice(0, 16));
+    showConfidenceMeter(pred.confidence);
+    document.getElementById('statTime').innerText = Math.round(performance.now() - t0) + 'ms';
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // Chain-of-Thought Reasoning — with REAL math solver
 // ═══════════════════════════════════════════════════════════════════
 async function startReasoning() {
+    const treeOfThoughtEnabled = document.getElementById('treeOfThoughtToggle')?.checked || false;
+    
+    if (treeOfThoughtEnabled) {
+        return await startTreeOfThoughtReasoning();
+    }
+
     const input = document.getElementById('inputText').value.trim();
     if (!input) { showNotification('Please enter a problem', 'warning'); return; }
     if (!model)  { showNotification('Train the model first', 'error');   return; }
@@ -858,6 +1031,40 @@ function init() {
         document.getElementById(sliderId)?.addEventListener('input', e => {
             document.getElementById(valId).innerText = fmt(e.target.value);
         });
+    });
+
+    // Set balanced device as active by default
+    document.getElementById('deviceBalancedBtn')?.classList.add('active');
+
+    // Tree of Thought toggle listener
+    document.getElementById('treeOfThoughtToggle')?.addEventListener('change', e => {
+        const enabled = e.target.checked;
+        showNotification(`Tree of Thought ${enabled ? 'enabled' : 'disabled'}`, 'info');
+    });
+
+    // Device configuration buttons
+    ['cpu', 'gpu', 'mobile', 'balanced', 'server'].forEach(device => {
+        document.getElementById(`device${device.charAt(0).toUpperCase() + device.slice(1)}Btn`)?.addEventListener('click', (e) => {
+            // Remove active class from all buttons
+            document.querySelectorAll('.btn-device').forEach(btn => btn.classList.remove('active'));
+            // Add active class to clicked button
+            e.target.closest('.btn-device').classList.add('active');
+            // Stop infinite mode if active
+            if (infiniteModeActive) stopInfiniteMode();
+            // Apply device config
+            applyDeviceConfig(DEVICE_CONFIGS[device]);
+        });
+    });
+
+    // Infinite mode button
+    document.getElementById('infiniteModeBtn')?.addEventListener('click', () => {
+        if (infiniteModeActive) {
+            stopInfiniteMode();
+            document.getElementById('infiniteModeBtn').style.opacity = '1';
+        } else {
+            startInfiniteMode();
+            document.getElementById('infiniteModeBtn').style.opacity = '0.6';
+        }
     });
 
     document.getElementById('startReasoningBtn')?.addEventListener('click', startReasoning);

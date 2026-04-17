@@ -98,6 +98,47 @@ Ratio:  Boys to girls = 3:4, 28 girls. Boys?"></textarea>
                     <div class="slider-marks"><span>3</span><span>5</span><span>7</span><span>10</span></div>
                 </div>
 
+                <div class="control-group">
+                    <label class="control-label">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M20.84 4.61a2.5 2.5 0 0 0-3.54 0l-5.83 5.83-3.75-3.75A2.5 2.5 0 0 0 2.41 9.41l5.83 5.83-5.83 5.83a2.5 2.5 0 0 0 3.54 3.54l5.83-5.83 5.83 5.83a2.5 2.5 0 0 0 3.54-3.54L13.54 15l5.83-5.83a2.5 2.5 0 0 0 0-3.54z"/></svg>
+                        <input type="checkbox" id="treeOfThoughtToggle" class="checkbox-input">
+                        <span>Tree of Thought</span>
+                    </label>
+                    <div class="option-description">Explore multiple reasoning paths simultaneously</div>
+                </div>
+
+                <div class="section-divider"><span>Device Configuration</span></div>
+
+                <div class="device-buttons">
+                    <button class="btn-device" id="deviceCpuBtn" data-device="cpu">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        CPU
+                    </button>
+                    <button class="btn-device" id="deviceGpuBtn" data-device="gpu">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 17h12a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2z"/><path d="M3 9l18-3"/></svg>
+                        GPU
+                    </button>
+                    <button class="btn-device" id="deviceMobileBtn" data-device="mobile">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
+                        Mobile
+                    </button>
+                    <button class="btn-device" id="deviceBalancedBtn" data-device="balanced" style="background: rgba(16,185,129,.2); border-color: rgba(16,185,129,.4);">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/></svg>
+                        Balanced
+                    </button>
+                    <button class="btn-device" id="deviceServerBtn" data-device="server">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8"/><rect x="2" y="14" width="20" height="8"/></svg>
+                        Server
+                    </button>
+                </div>
+
+                <div class="btn-row">
+                    <button class="btn-secondary" id="infiniteModeBtn" style="width: 100%;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M0 10a10 10 0 0 1 20 0c0 3-1.5 6-4 8M24 10a10 10 0 0 1-20 0c0-3 1.5-6 4-8"/></svg>
+                        ♾️ Infinite Mode
+                    </button>
+                </div>
+
                 <div class="section-divider"><span>Model Hyperparameters</span></div>
 
                 <div class="control-group">

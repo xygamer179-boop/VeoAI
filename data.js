@@ -210,5 +210,75 @@ const DEFAULT_CONFIG = {
     activation: "relu",
     reasoningDepth: 5,
     batchSize: 8,
-    epochs: 60
+    epochs: 60,
+    infiniteMode: false,
+    infiniteInterval: 3000  // ms between config changes
 };
+
+// Device-specific recommended configurations
+const DEVICE_CONFIGS = {
+    cpu: {
+        name: "CPU Optimized",
+        numLayers: 1,
+        units: 16,
+        learningRate: 0.002,
+        activation: "relu",
+        reasoningDepth: 3,
+        batchSize: 4,
+        epochs: 30,
+        description: "Lightweight config for standard CPU processors"
+    },
+    gpu: {
+        name: "GPU Accelerated",
+        numLayers: 4,
+        units: 64,
+        learningRate: 0.005,
+        activation: "relu",
+        reasoningDepth: 8,
+        batchSize: 32,
+        epochs: 100,
+        description: "High-performance config for GPU execution"
+    },
+    mobile: {
+        name: "Mobile Optimized",
+        numLayers: 1,
+        units: 8,
+        learningRate: 0.001,
+        activation: "sigmoid",
+        reasoningDepth: 2,
+        batchSize: 2,
+        epochs: 15,
+        description: "Ultra-lightweight for mobile devices"
+    },
+    balanced: {
+        name: "Balanced (Recommended)",
+        numLayers: 2,
+        units: 32,
+        learningRate: 0.003,
+        activation: "relu",
+        reasoningDepth: 5,
+        batchSize: 8,
+        epochs: 60,
+        description: "Balanced performance across all devices"
+    },
+    server: {
+        name: "Server High-End",
+        numLayers: 5,
+        units: 128,
+        learningRate: 0.006,
+        activation: "elu",
+        reasoningDepth: 10,
+        batchSize: 64,
+        epochs: 150,
+        description: "Maximum capacity for enterprise servers"
+    }
+};
+
+// Infinite mode config sequence
+const INFINITE_CONFIG_SEQUENCE = [
+    { ...DEVICE_CONFIGS.mobile, label: "Mobile" },
+    { ...DEVICE_CONFIGS.cpu, label: "CPU" },
+    { ...DEVICE_CONFIGS.balanced, label: "Balanced" },
+    { ...DEVICE_CONFIGS.gpu, label: "GPU" },
+    { ...DEVICE_CONFIGS.server, label: "Server" }
+];
